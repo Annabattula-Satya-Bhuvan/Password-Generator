@@ -2,73 +2,89 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import string
 import secrets
+import random
 
-# -----------------------------
-# Colors
-# -----------------------------
-BG = "#0B0F19"
-CARD = "#151C2E"
-BLUE = "#00A8FF"
+# ===========================
+# Color Theme
+# ===========================
+BG_COLOR = "#0B0F19"
+CARD_COLOR = "#151A2D"
+PRIMARY = "#0099FF"
+SECONDARY = "#1E293B"
 TEXT = "#FFFFFF"
-GREEN = "#00E676"
-ORANGE = "#FFB300"
-RED = "#FF5252"
+SUCCESS = "#00E676"
+WARNING = "#FFC107"
+DANGER = "#FF5252"
 
-# -----------------------------
-# Generate Password
-# -----------------------------
-def generate_password():
-    try:
-        length = int(length_entry.get())
+# ===========================
+# Main Window
+# ===========================
+root = tk.Tk()
+root.title("Premium Password Generator")
+root.geometry("700x650")
+root.configure(bg=BG_COLOR)
+root.resizable(False, False)
 
-        if length < 4:
-            messagebox.showerror("Error", "Password length must be at least 4.")
-            return
+style = ttk.Style()
+style.theme_use("clam")
 
-        characters = ""
+style.configure(
+    "TCheckbutton",
+    background=CARD_COLOR,
+    foreground="white",
+    font=("Segoe UI", 10)
+)
 
-        if upper_var.get():
-            characters += string.ascii_uppercase
+# ===========================
+# Variables
+# ===========================
+length_var = tk.IntVar(value=12)
 
-        if lower_var.get():
-            characters += string.ascii_lowercase
+upper_var = tk.BooleanVar(value=True)
+lower_var = tk.BooleanVar(value=True)
+number_var = tk.BooleanVar(value=True)
+symbol_var = tk.BooleanVar(value=True)
 
-        if number_var.get():
-            characters += string.digits
+show_var = tk.BooleanVar(value=False)
 
-        if symbol_var.get():
-            characters += string.punctuation
+# ===========================
+# Character Pool
+# ===========================
+def get_characters():
 
-        if not characters:
-            messagebox.showerror("Error", "Select at least one character type.")
-            return
+    chars = ""
 
-        password = ''.join(
-            secrets.choice(characters)
-            for _ in range(length)
-        )
+    if upper_var.get():
+        chars += string.ascii_uppercase
 
-        password_entry.config(state="normal")
-        password_entry.delete(0, tk.END)
-        password_entry.insert(0, password)
-        password_entry.config(state="readonly")
+    if lower_var.get():
+        chars += string.ascii_lowercase
 
-        update_strength(password)
+    if number_var.get():
+        chars += string.digits
 
-    except ValueError:
-        messagebox.showerror("Error", "Enter a valid password length.")
+    if symbol_var.get():
+        chars += string.punctuation
 
-# -----------------------------
+    return chars
+
+# ===========================
 # Password Strength
-# -----------------------------
-def update_strength(password):
+# ===========================
+def password_strength(password):
 
     score = 0
 
-    if any(c.islower() for c in password):
+    if len(password) >= 8:
+        score += 1
+
+    if len(password) >= 12:
         score += 1
 
     if any(c.isupper() for c in password):
+        score += 1
+
+    if any(c.islower() for c in password):
         score += 1
 
     if any(c.isdigit() for c in password):
@@ -77,21 +93,74 @@ def update_strength(password):
     if any(c in string.punctuation for c in password):
         score += 1
 
-    if len(password) >= 12:
-        score += 1
-
     if score <= 2:
-        strength_label.config(text="Weak", fg=RED)
+        return "Weak", DANGER
 
     elif score <= 4:
-        strength_label.config(text="Medium", fg=ORANGE)
+        return "Medium", WARNING
 
     else:
-        strength_label.config(text="Strong", fg=GREEN)
+        return "Strong", SUCCESS
 
-# -----------------------------
+# ===========================
+# Generate Password
+# ===========================
+def generate_password():
+
+    characters = get_characters()
+
+    if not characters:
+        messagebox.showerror(
+            "Error",
+            "Please select at least one character type."
+        )
+        return
+
+    length = length_var.get()
+
+    if length < 4:
+        messagebox.showerror(
+            "Error",
+            "Password length must be at least 4."
+        )
+        return
+
+    password = ""
+
+    if upper_var.get():
+        password += secrets.choice(string.ascii_uppercase)
+
+    if lower_var.get():
+        password += secrets.choice(string.ascii_lowercase)
+
+    if number_var.get():
+        password += secrets.choice(string.digits)
+
+    if symbol_var.get():
+        password += secrets.choice(string.punctuation)
+
+    while len(password) < length:
+        password += secrets.choice(characters)
+
+    password = list(password)
+    random.shuffle(password)
+    password = "".join(password[:length])
+
+    password_entry.config(state="normal")
+    password_entry.delete(0, tk.END)
+    password_entry.insert(0, password)
+    password_entry.config(state="readonly")
+
+    strength, color = password_strength(password)
+
+    strength_label.config(
+        text=strength,
+        fg=color
+    )
+
+# ===========================
 # Copy Password
-# -----------------------------
+# ===========================
 def copy_password():
 
     password = password_entry.get()
@@ -107,19 +176,9 @@ def copy_password():
         "Password copied successfully!"
     )
 
-# -----------------------------
-# Show / Hide Password
-# -----------------------------
-def toggle_password():
-
-    if show_var.get():
-        password_entry.config(show="")
-    else:
-        password_entry.config(show="*")
-
-# -----------------------------
+# ===========================
 # Save Password
-# -----------------------------
+# ===========================
 def save_password():
 
     password = password_entry.get()
@@ -127,273 +186,20 @@ def save_password():
     if password == "":
         return
 
-    with open("password_history.txt","a") as file:
-        file.write(password+"\n")
+    with open("password_history.txt", "a") as file:
+        file.write(password + "\n")
 
     messagebox.showinfo(
         "Saved",
-        "Password saved to password_history.txt"
+        "Password saved successfully!"
     )
 
-# -----------------------------
-# Main Window
-# -----------------------------
-root = tk.Tk()
-
-root.title("Premium Password Generator")
-
-root.geometry("600x650")
-
-root.configure(bg=BG)
-
-root.resizable(False,False)
-
-# -----------------------------
-# Title
-# -----------------------------
-title = tk.Label(
-
-    root,
-
-    text="🔐 Premium Password Generator",
-
-    font=("Segoe UI",24,"bold"),
-
-    bg=BG,
-
-    fg=BLUE
-
-)
-
-title.pack(pady=20)
-
-subtitle = tk.Label(
-
-    root,
-
-    text="Generate Secure Random Passwords",
-
-    font=("Segoe UI",11),
-
-    bg=BG,
-
-    fg="white"
-
-)
-
-subtitle.pack()
-
-# -----------------------------
-# Card
-# -----------------------------
-card = tk.Frame(
-
-    root,
-
-    bg=CARD,
-
-    padx=30,
-
-    pady=25
-
-)
-
-card.pack(pady=30)
-
-# Password Length
-
-tk.Label(
-
-    card,
-
-    text="Password Length",
-
-    font=("Segoe UI",11),
-
-    bg=CARD,
-
-    fg=TEXT
-
-).pack(anchor="w")
-
-length_entry = ttk.Entry(card,font=("Segoe UI",12),width=20)
-
-length_entry.insert(0,"12")
-
-length_entry.pack(pady=10)
-
-# Checkboxes
-
-upper_var=tk.BooleanVar(value=True)
-lower_var=tk.BooleanVar(value=True)
-number_var=tk.BooleanVar(value=True)
-symbol_var=tk.BooleanVar(value=True)
-
-ttk.Checkbutton(card,text="Uppercase",variable=upper_var).pack(anchor="w")
-ttk.Checkbutton(card,text="Lowercase",variable=lower_var).pack(anchor="w")
-ttk.Checkbutton(card,text="Numbers",variable=number_var).pack(anchor="w")
-ttk.Checkbutton(card,text="Symbols",variable=symbol_var).pack(anchor="w")
-
-# Generate Button
-
-generate_btn=tk.Button(
-
-    card,
-
-    text="Generate Password",
-
-    command=generate_password,
-
-    bg=BLUE,
-
-    fg="white",
-
-    font=("Segoe UI",12,"bold"),
-
-    relief="flat",
-
-    padx=20,
-
-    pady=10
-
-)
-
-generate_btn.pack(fill="x",pady=20)
-
-# Password Field
-
-password_entry=tk.Entry(
-
-    card,
-
-    font=("Consolas",14),
-
-    justify="center",
-
-    width=35,
-
-    show="*",
-
-    state="readonly"
-
-)
-
-password_entry.pack()
-
-# Show Password
-
-show_var=tk.BooleanVar()
-
-tk.Checkbutton(
-
-    card,
-
-    text="Show Password",
-
-    variable=show_var,
-
-    command=toggle_password,
-
-    bg=CARD,
-
-    fg="white",
-
-    selectcolor=CARD
-
-).pack(anchor="w",pady=10)
-
-# Strength
-
-strength_title=tk.Label(
-
-    card,
-
-    text="Password Strength:",
-
-    bg=CARD,
-
-    fg="white",
-
-    font=("Segoe UI",11)
-
-)
-
-strength_title.pack()
-
-strength_label=tk.Label(
-
-    card,
-
-    text="-",
-
-    bg=CARD,
-
-    fg=GREEN,
-
-    font=("Segoe UI",13,"bold")
-
-)
-
-strength_label.pack()
-
-# Buttons
-
-button_frame=tk.Frame(card,bg=CARD)
-
-button_frame.pack(pady=20)
-
-copy_btn=tk.Button(
-
-    button_frame,
-
-    text="Copy",
-
-    command=copy_password,
-
-    bg="#0099FF",
-
-    fg="white",
-
-    width=12
-
-)
-
-copy_btn.grid(row=0,column=0,padx=10)
-
-save_btn=tk.Button(
-
-    button_frame,
-
-    text="Save",
-
-    command=save_password,
-
-    bg="#2962FF",
-
-    fg="white",
-
-    width=12
-
-)
-
-save_btn.grid(row=0,column=1,padx=10)
-
-# Footer
-
-footer=tk.Label(
-
-    root,
-
-    text="Designed with Python • Tkinter • Secrets Module",
-
-    bg=BG,
-
-    fg="#8DA9C4",
-
-    font=("Segoe UI",9)
-
-)
-
-footer.pack(side="bottom",pady=15)
-
-root.mainloop()
+# ===========================
+# Show / Hide Password
+# ===========================
+def toggle_password():
+
+    if show_var.get():
+        password_entry.config(show="")
+    else:
+        password_entry.config(show="*")
